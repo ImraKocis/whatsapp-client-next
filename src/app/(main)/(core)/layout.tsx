@@ -1,4 +1,4 @@
-export default function MainLayout({
+export default function MainCoreLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
