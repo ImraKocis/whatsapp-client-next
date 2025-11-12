@@ -1,11 +1,7 @@
 "use client";
 
-import { User } from "@/types/chat-types";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@workspace/ui/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { User } from "@/lib/api/user/types";
 
 interface ChatHeaderProps {
   recipient: User;

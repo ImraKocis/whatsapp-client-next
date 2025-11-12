@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Socket } from "socket.io-client";
+import { useUser } from "@/lib/redux/hooks";
 import { disconnectSocket, getSocket } from "@/lib/socket";
 import type { Message, TypingIndicator } from "@/lib/types/chat";
 
@@ -18,6 +19,7 @@ interface UseSocketProps {
     userId: number;
     status: "online" | "offline";
   }) => void;
+  onMessageSent?: (message: Message) => void;
 }
 
 export const useSocket = ({
@@ -26,11 +28,13 @@ export const useSocket = ({
   onMessageReceived,
   onMessageStatusUpdate,
   onUserStatusChange,
+  onMessageSent,
 }: UseSocketProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
   const hasConnected = useRef(false);
+  const user = useUser();
 
   useEffect(() => {
     // Prevent double connection in React Strict Mode
@@ -143,10 +147,33 @@ export const useSocket = ({
         },
         (response: any) => {
           console.log("📤 Message sent:", response);
+
+          // ✅ Call the callback with optimistic message
+          if (
+            response.status === "sent" &&
+            response.messageId &&
+            onMessageSent
+          ) {
+            const optimisticMessage: Message = {
+              id: response.messageId,
+              content,
+              senderId: userId,
+              conversationId: conversationId || response.conversationId,
+              status: "PENDING",
+              createdAt: new Date().toISOString(),
+              Sender: {
+                id: userId,
+                firstName: user?.firstName ?? "",
+                lastName: user?.lastName ?? "",
+                avatar: user?.avatar ?? "",
+              },
+            };
+            onMessageSent(optimisticMessage);
+          }
         },
       );
     },
-    [socket, conversationId],
+    [socket, conversationId, userId, user, onMessageSent],
   );
 
   const startTyping = useCallback(() => {

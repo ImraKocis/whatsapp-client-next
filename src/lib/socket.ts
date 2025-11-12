@@ -1,11 +1,10 @@
 import { io, type Socket } from "socket.io-client";
-import config from "@/config";
 
 let socket: Socket | null = null;
 
 export const getSocket = (userId: number): Socket => {
   if (!socket) {
-    socket = io(`${config.BASE_WS_URL}/chat`, {
+    socket = io(`${process.env.NEXT_PUBLIC_BASE_WS_URL}/chat`, {
       auth: {
         userId: userId,
       },

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useSocket } from "@/hooks/useSocket";
-import { User, Message } from "@/types/chat-types";
-import { Card } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
+import { useCallback, useEffect, useState } from "react";
 import { ChatHeader } from "@/components/chat/chat-header";
-import { MessageList } from "@/components/chat/message-list";
 import { MessageInput } from "@/components/chat/message-inpit";
+import { MessageList } from "@/components/chat/message-list";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { useSocket } from "@/hooks/useSocket";
+import type { User } from "@/lib/api/user/types";
+import type { Message } from "@/lib/types/chat";
 
 interface ChatProps {
   currentUserId: number;
@@ -26,7 +27,8 @@ export const Chat = ({
   const [recipientOnlineStatus, setRecipientOnlineStatus] = useState(false);
 
   const handleMessageReceived = useCallback((message: Message) => {
-    setMessages((prev) => [...prev, message]);
+    console.log("Received message", JSON.stringify(message));
+    setMessages((prev) => [message, ...prev]);
   }, []);
 
   const handleMessageStatusUpdate = useCallback(
@@ -53,6 +55,10 @@ export const Chat = ({
     [recipient.id],
   );
 
+  const handleMessageSent = useCallback((message: Message) => {
+    setMessages((prev) => [message, ...prev]);
+  }, []);
+
   const {
     isConnected,
     typingUsers,
@@ -60,13 +66,13 @@ export const Chat = ({
     startTyping,
     stopTyping,
     markMessageAsRead,
-    markConversationAsRead,
   } = useSocket({
     userId: currentUserId,
     conversationId,
     onMessageReceived: handleMessageReceived,
     onMessageStatusUpdate: handleMessageStatusUpdate,
     onUserStatusChange: handleUserStatusChange,
+    onMessageSent: handleMessageSent,
   });
 
   useEffect(() => {
@@ -77,7 +83,7 @@ export const Chat = ({
 
       if (unreadMessages.length > 0) {
         const lastMessage = unreadMessages[unreadMessages.length - 1];
-        markMessageAsRead(lastMessage!.id);
+        markMessageAsRead(lastMessage.id);
       }
     }
   }, [messages, isConnected, recipient.id, markMessageAsRead]);

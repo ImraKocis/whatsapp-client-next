@@ -1,5 +1,5 @@
 export interface SessionCookie {
-  token: string;
+  accessToken: string;
   refreshToken: string;
   id: number;
 }

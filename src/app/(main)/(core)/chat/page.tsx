@@ -1,3 +1,3 @@
 export default function Page() {
-  return <div>Chat</div>;
+  return <div>Chat placeholder page</div>;
 }

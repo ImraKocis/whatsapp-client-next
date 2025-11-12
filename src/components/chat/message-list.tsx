@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Message } from "@/types/chat-types";
-import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import { MessageItem } from "@/components/chat/message-item";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Message } from "@/lib/types/chat";
 
 interface MessageListProps {
   messages: Message[];
@@ -18,27 +18,36 @@ export const MessageList = ({
 }: MessageListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: must track new message and typing
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Find the scrollable viewport inside ScrollArea
+      const viewport = scrollRef.current.querySelector(
+        "[data-radix-scroll-area-viewport]",
+      );
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
   return (
-    <ScrollArea className="flex-1 p-4">
-      <div ref={scrollRef} className="space-y-4">
+    <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
+      <div className="space-y-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500">
             <p>No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageItem
-              key={message.id}
-              message={message}
-              currentUserId={currentUserId}
-            />
-          ))
+          <div className="flex flex-col-reverse">
+            {messages.map((message) => (
+              <MessageItem
+                key={message.id}
+                message={message}
+                currentUserId={currentUserId}
+              />
+            ))}
+          </div>
         )}
 
         {isTyping && (

@@ -1,14 +1,14 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { Session, SessionCookie } from "@/lib/auth/types";
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
+import type { SessionCookie } from "@/lib/auth/types";
 
 const jwtExpireAt = new Date(Date.now() + 30 * 60 * 1000);
 const rtExpireAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
 export async function createSession(payload: SessionCookie) {
-  (await cookies()).set("jwt-token", payload.token, {
+  (await cookies()).set("access-token", payload.accessToken, {
     httpOnly: true,
     secure: true,
     expires: jwtExpireAt,
@@ -16,15 +16,7 @@ export async function createSession(payload: SessionCookie) {
     path: "/",
   });
 
-  (await cookies()).set("rt-token", payload.refreshToken, {
-    httpOnly: true,
-    secure: true,
-    expires: rtExpireAt,
-    sameSite: "lax",
-    path: "/",
-  });
-
-  (await cookies()).set("user-id", payload.id.toString(), {
+  (await cookies()).set("refresh-token", payload.refreshToken, {
     httpOnly: true,
     secure: true,
     expires: rtExpireAt,
@@ -34,20 +26,14 @@ export async function createSession(payload: SessionCookie) {
 }
 
 export async function deleteSession() {
-  (await cookies()).delete("jwt-token");
-  (await cookies()).delete("rt-token");
-  (await cookies()).delete("user-id");
+  (await cookies()).delete("access-token");
+  (await cookies()).delete("refresh-token");
 }
 
-export async function getSession(): Promise<Session> {
-  const jwt = (await cookies()).get("jwt-token")?.value;
-  const rt = (await cookies()).get("rt-token")?.value;
-  return { jwt, rt };
-}
-
-export async function getSessionUserId(): Promise<{ id?: string }> {
-  const id = (await cookies()).get("user-id")?.value;
-  return { id };
+export async function getToken(
+  type: "access-token" | "refresh-token",
+): Promise<string | undefined> {
+  return (await cookies()).get(type)?.value;
 }
 
 export function createSessionInResponse(
@@ -57,7 +43,7 @@ export function createSessionInResponse(
   const jwtExpireAt = new Date(Date.now() + 30 * 60 * 1000);
   const rtExpireAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  response.cookies.set("jwt-token", payload.token, {
+  response.cookies.set("access-token", payload.accessToken, {
     httpOnly: true,
     secure: true,
     expires: jwtExpireAt,
@@ -65,15 +51,7 @@ export function createSessionInResponse(
     path: "/",
   });
 
-  response.cookies.set("rt-token", payload.refreshToken, {
-    httpOnly: true,
-    secure: true,
-    expires: rtExpireAt,
-    sameSite: "lax",
-    path: "/",
-  });
-
-  response.cookies.set("user-id", payload.id.toString(), {
+  response.cookies.set("refresh-token", payload.refreshToken, {
     httpOnly: true,
     secure: true,
     expires: rtExpireAt,
@@ -85,5 +63,4 @@ export function createSessionInResponse(
 export function deleteSessionFromResponse(response: NextResponse) {
   response.cookies.delete("jwt-token");
   response.cookies.delete("rt-token");
-  response.cookies.delete("user-id");
 }

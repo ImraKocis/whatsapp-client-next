@@ -1,28 +1,29 @@
-import { getSession } from "@/lib/auth/session";
+import config from "@/config";
+import { getToken } from "@/lib/auth/session";
 
 export async function fetchWithAuth(
   url: string,
   options: RequestInit = {},
 ): Promise<Response> {
-  const session = await getSession();
+  const token = await getToken("access-token");
 
   return fetch(url, {
     ...options,
     headers: {
       ...options.headers,
       "Content-Type": "application/json",
-      ...(session.jwt && { Authorization: `Bearer ${session.jwt}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
   });
 }
 
 export async function apiGet<T>(
   endpoint: string,
-  fetchTag?: string,
+  options: RequestInit = {},
 ): Promise<T> {
   const response = await fetchWithAuth(
-    `${process.env.API_BASE_URL}${endpoint}`,
-    fetchTag ? { next: { tags: [fetchTag] } } : undefined,
+    `${config.BASE_API_URL}/${endpoint}`,
+    options,
   );
   if (!response.ok) {
     return null as T;
@@ -31,36 +32,27 @@ export async function apiGet<T>(
 }
 
 export async function apiPost<T, R>(endpoint: string, data: T): Promise<R> {
-  const response = await fetchWithAuth(
-    `${process.env.API_BASE_URL}${endpoint}`,
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  );
+  const response = await fetchWithAuth(`${config.BASE_API_URL}/${endpoint}`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 
   return await response.json();
 }
 
 export async function apiPatch<T, R>(endpoint: string, data: T): Promise<R> {
-  const response = await fetchWithAuth(
-    `${process.env.API_BASE_URL}${endpoint}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    },
-  );
+  const response = await fetchWithAuth(`${config.BASE_API_URL}/${endpoint}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 
   return await response.json();
 }
 
 export async function apiDelete<T>(endpoint: string): Promise<T> {
-  const response = await fetchWithAuth(
-    `${process.env.API_BASE_URL}${endpoint}`,
-    {
-      method: "DELETE",
-    },
-  );
+  const response = await fetchWithAuth(`${config.BASE_API_URL}/${endpoint}`, {
+    method: "DELETE",
+  });
 
   if (response.status === 204) return true as T;
   return await response.json();

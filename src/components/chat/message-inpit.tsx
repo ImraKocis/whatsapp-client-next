@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, KeyboardEvent, useEffect } from "react";
 import { Send } from "lucide-react";
-import { Input } from "@workspace/ui/components/input";
-import { Button } from "@workspace/ui/components/button";
+import { type KeyboardEvent, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface MessageInputProps {
   onSend: (content: string) => void;

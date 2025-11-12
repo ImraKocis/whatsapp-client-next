@@ -1,13 +1,9 @@
 "use client";
 
-import { Message } from "@/types/chat-types";
 import { Check, CheckCheck } from "lucide-react";
-import { cn } from "@workspace/ui/lib/utils";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@workspace/ui/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Message } from "@/lib/types/chat";
+import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
   message: Message;
@@ -16,11 +12,11 @@ interface MessageItemProps {
 
 export const MessageItem = ({ message, currentUserId }: MessageItemProps) => {
   const isOwn = message.senderId === currentUserId;
-  const senderName = message.sender
-    ? `${message.sender.firstName} ${message.sender.lastName}`
+  const senderName = message.Sender
+    ? `${message.Sender.firstName} ${message.Sender.lastName}`
     : "Unknown";
-  const initials = message.sender
-    ? `${message.sender.firstName[0]}${message.sender.lastName[0]}`
+  const initials = message.Sender
+    ? `${message.Sender.firstName[0]}${message.Sender.lastName[0]}`
     : "?";
 
   const getStatusIcon = () => {
@@ -36,11 +32,14 @@ export const MessageItem = ({ message, currentUserId }: MessageItemProps) => {
 
   return (
     <div
-      className={cn("flex gap-3 mb-4", isOwn ? "flex-row-reverse" : "flex-row")}
+      className={cn(
+        "flex items-center gap-3 mb-4",
+        isOwn ? "flex-row" : "flex-row-reverse",
+      )}
     >
       {!isOwn && (
         <Avatar className="h-8 w-8">
-          <AvatarImage src={message.sender?.avatar} />
+          <AvatarImage src={message.Sender?.avatar} />
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
       )}
@@ -68,7 +67,7 @@ export const MessageItem = ({ message, currentUserId }: MessageItemProps) => {
 
         <div className="flex items-center gap-1 mt-1">
           <span className="text-xs text-gray-500">
-            {new Date(message.createdAt).toLocaleTimeString("en-US", {
+            {new Date(message.createdAt).toLocaleTimeString("hr-HR", {
               hour: "2-digit",
               minute: "2-digit",
             })}
