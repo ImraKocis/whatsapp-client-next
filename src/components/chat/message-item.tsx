@@ -22,7 +22,7 @@ export const MessageItem = ({ message, currentUserId }: MessageItemProps) => {
   const getStatusIcon = () => {
     switch (message.status) {
       case "DELIVERED":
-        return <Check className="h-3 w-3" />;
+        return <CheckCheck className="h-3 w-3 text-gray-400" />;
       case "READ":
         return <CheckCheck className="h-3 w-3 text-blue-600" />;
       default:
@@ -72,7 +72,7 @@ export const MessageItem = ({ message, currentUserId }: MessageItemProps) => {
               minute: "2-digit",
             })}
           </span>
-          {isOwn && <span className="text-gray-500">{getStatusIcon()}</span>}
+          {isOwn && <span>{getStatusIcon()}</span>}
         </div>
       </div>
     </div>

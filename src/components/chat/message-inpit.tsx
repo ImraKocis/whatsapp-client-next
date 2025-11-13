@@ -45,17 +45,15 @@ export const MessageInput = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
 
-    if (!isTyping && e.target.value) {
+    if (e.target.value) {
       onTypingStart();
       setIsTyping(true);
     }
 
-    // Clear existing timeout
     if (typingTimeout) {
       clearTimeout(typingTimeout);
     }
 
-    // Set new timeout to stop typing indicator
     const timeout = setTimeout(() => {
       onTypingStop();
       setIsTyping(false);

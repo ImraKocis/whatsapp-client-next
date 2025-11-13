@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import envConfig from "@/config";
 import {
   createSessionInResponse,
   deleteSessionFromResponse,
@@ -32,12 +31,15 @@ export async function middleware(request: NextRequest) {
 
   if (!jwtToken && rtToken && !isPublicRoute) {
     try {
-      const response = await fetch(`${envConfig.BASE_API_URL}/auth/refresh`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${rtToken}`,
+      const response = await fetch(
+        `${process.env.WEB_BASE_API_URL}/auth/refresh`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${rtToken}`,
+          },
         },
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();

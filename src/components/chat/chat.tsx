@@ -1,6 +1,8 @@
 "use client";
 
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
+import { fetchMessagesInfiniteAction } from "@/app/_actions/messages-infinite/messages-infinite";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { MessageInput } from "@/components/chat/message-inpit";
 import { MessageList } from "@/components/chat/message-list";
@@ -26,8 +28,29 @@ export const Chat = ({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [recipientOnlineStatus, setRecipientOnlineStatus] = useState(false);
 
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["messages", conversationId],
+      queryFn: ({ pageParam = 0 }) =>
+        conversationId
+          ? fetchMessagesInfiniteAction(conversationId, 10, pageParam)
+          : Promise.resolve({
+              conversationId: 0,
+              messages: [],
+              count: 0,
+              hasMore: false,
+              nextOffset: null,
+            }),
+      getNextPageParam: (lastPage) => lastPage.nextOffset,
+      initialPageParam: 0,
+      enabled: !!conversationId,
+    });
+
+  // ✅ Flatten all pages into single messages array
+  const allMessages =
+    data?.pages.flatMap((page) => page.messages) ?? initialMessages;
+
   const handleMessageReceived = useCallback((message: Message) => {
-    console.log("Received message", JSON.stringify(message));
     setMessages((prev) => [message, ...prev]);
   }, []);
 
@@ -66,6 +89,7 @@ export const Chat = ({
     startTyping,
     stopTyping,
     markMessageAsRead,
+    checkUserStatus,
   } = useSocket({
     userId: currentUserId,
     conversationId,
@@ -75,18 +99,34 @@ export const Chat = ({
     onMessageSent: handleMessageSent,
   });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignore
   useEffect(() => {
-    if (isConnected && messages.length > 0) {
-      const unreadMessages = messages.filter(
-        (msg) => msg.senderId === recipient.id && msg.status !== "READ",
-      );
+    if (!isConnected || messages.length === 0) return;
 
-      if (unreadMessages.length > 0) {
-        const lastMessage = unreadMessages[unreadMessages.length - 1];
-        markMessageAsRead(lastMessage.id);
-      }
+    // Get all unread messages from the recipient
+    const unreadMessages = messages.filter(
+      (msg) => msg.senderId === recipient.id && msg.status !== "READ",
+    );
+
+    // Mark each unread message as read
+    if (unreadMessages.length > 0) {
+      console.log(
+        "🔵 Marking messages as read:",
+        unreadMessages.map((m) => m.id),
+      );
+      unreadMessages.forEach((msg) => {
+        markMessageAsRead(msg.id, msg.conversationId);
+      });
     }
-  }, [messages, isConnected, recipient.id, markMessageAsRead]);
+  }, [messages.length, isConnected]);
+
+  useEffect(() => {
+    if (isConnected && checkUserStatus) {
+      checkUserStatus(recipient.id).then((status) => {
+        setRecipientOnlineStatus(status.online);
+      });
+    }
+  }, [isConnected, recipient.id, checkUserStatus]);
 
   const handleSendMessage = (content: string) => {
     sendMessage(content, recipient.id);
@@ -103,9 +143,12 @@ export const Chat = ({
       </div>
       <ChatHeader recipient={recipient} isOnline={recipientOnlineStatus} />
       <MessageList
-        messages={messages}
+        messages={allMessages}
         currentUserId={currentUserId}
         isTyping={isTyping}
+        onLoadMore={fetchNextPage}
+        hasMore={hasNextPage}
+        isLoadingMore={isFetchingNextPage}
       />
       <MessageInput
         onSend={handleSendMessage}

@@ -37,14 +37,12 @@ export const useSocket = ({
   const user = useUser();
 
   useEffect(() => {
-    // Prevent double connection in React Strict Mode
     if (hasConnected.current) return;
     hasConnected.current = true;
 
     const socketInstance = getSocket(userId);
     setSocket(socketInstance);
 
-    // Connection events
     socketInstance.on("connect", () => {
       console.log("✅ Connected to chat server");
       setIsConnected(true);
@@ -60,15 +58,12 @@ export const useSocket = ({
       setIsConnected(false);
     });
 
-    // Message events - delegate to callbacks
     socketInstance.on("message:received", (message: Message) => {
-      console.log("📨 Message received:", message);
       if (onMessageReceived) {
         onMessageReceived(message);
       }
     });
 
-    // Message status updates - AUTOMATIC from backend
     socketInstance.on(
       "message:status",
       (data: {
@@ -77,7 +72,6 @@ export const useSocket = ({
         userId?: number;
         timestamp: string;
       }) => {
-        console.log("✓ Message status update:", data);
         if (onMessageStatusUpdate) {
           onMessageStatusUpdate(data);
         }
@@ -99,7 +93,6 @@ export const useSocket = ({
       },
     );
 
-    // Typing events
     socketInstance.on("user:typing", (data: TypingIndicator) => {
       if (data.conversationId === conversationId) {
         if (data.isTyping) {
@@ -114,7 +107,6 @@ export const useSocket = ({
       }
     });
 
-    // Cleanup
     return () => {
       socketInstance.off("connect");
       socketInstance.off("disconnect");
@@ -146,9 +138,6 @@ export const useSocket = ({
           content,
         },
         (response: any) => {
-          console.log("📤 Message sent:", response);
-
-          // ✅ Call the callback with optimistic message
           if (
             response.status === "sent" &&
             response.messageId &&
@@ -158,8 +147,8 @@ export const useSocket = ({
               id: response.messageId,
               content,
               senderId: userId,
-              conversationId: conversationId || response.conversationId,
-              status: "PENDING",
+              conversationId: conversationId ?? response.conversationId,
+              status: response.messageStatus ?? "PENDING",
               createdAt: new Date().toISOString(),
               Sender: {
                 id: userId,
@@ -187,17 +176,38 @@ export const useSocket = ({
   }, [socket, conversationId]);
 
   const markMessageAsRead = useCallback(
-    (messageId: number) => {
-      if (!socket || !conversationId) return;
+    (messageId: number, conversationId?: number) => {
+      if (!socket || !conversationId) {
+        return;
+      }
+
       socket.emit("message:read", { messageId, conversationId });
     },
-    [socket, conversationId],
+    [socket],
   );
 
   const markConversationAsRead = useCallback(() => {
     if (!socket || !conversationId) return;
     socket.emit("conversation:read", { conversationId });
   }, [socket, conversationId]);
+
+  const checkUserStatus = useCallback(
+    (
+      userId: number,
+    ): Promise<{ userId: number; status: string; online: boolean }> => {
+      return new Promise((resolve) => {
+        if (!socket) {
+          resolve({ userId, status: "offline", online: false });
+          return;
+        }
+
+        socket.emit("user:status:check", { userId }, (response: any) => {
+          resolve(response);
+        });
+      });
+    },
+    [socket],
+  );
 
   return {
     socket,
@@ -208,5 +218,6 @@ export const useSocket = ({
     stopTyping,
     markMessageAsRead,
     markConversationAsRead,
+    checkUserStatus,
   };
 };

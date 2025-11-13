@@ -55,7 +55,7 @@ export default async function Page({ params }: Readonly<PageProps>) {
       conversationId: number;
       messages: Message[];
       count: number;
-    }>(`conversation/${conversationId}/messages?limit=50&offset=0`, {
+    }>(`conversation/${conversationId}/messages?limit=10&offset=0`, {
       next: { tags: [`messages-${conversationId}`] },
     });
 
@@ -68,6 +68,7 @@ export default async function Page({ params }: Readonly<PageProps>) {
         currentUserId={currentUser.id}
         recipient={recipient}
         initialMessages={initialMessages}
+        conversationId={conversationId}
       />
     </div>
   );

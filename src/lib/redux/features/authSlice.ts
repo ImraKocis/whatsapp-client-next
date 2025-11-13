@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AuthResponse } from "@/app/actions/auth/types";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { AuthResponse } from "@/app/_actions/auth/types";
 
 export interface AuthSlice {
   auth: AuthResponse | null;
