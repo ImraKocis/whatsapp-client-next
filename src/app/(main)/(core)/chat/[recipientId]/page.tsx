@@ -63,7 +63,7 @@ export default async function Page({ params }: Readonly<PageProps>) {
   }
 
   return (
-    <div className="p-10">
+    <div className="p-10 flex w-full">
       <Chat
         currentUserId={currentUser.id}
         recipient={recipient}

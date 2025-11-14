@@ -78,7 +78,6 @@ export const useSocket = ({
       },
     );
 
-    // User status events
     socketInstance.on(
       "user:status",
       (data: {
@@ -138,6 +137,7 @@ export const useSocket = ({
           content,
         },
         (response: any) => {
+          console.log(response);
           if (
             response.status === "sent" &&
             response.messageId &&

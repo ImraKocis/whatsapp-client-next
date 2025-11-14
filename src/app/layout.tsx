@@ -22,7 +22,9 @@ export default async function RootLayout({
   const user = await getUser();
   return (
     <html lang="en">
-      <body className={`${fontSans.variable} font-sans antialiased`}>
+      <body
+        className={`${fontSans.variable} flex flex-col font-sans antialiased min-h-screen`}
+      >
         <Providers user={user}>{children}</Providers>
         <Toaster />
       </body>

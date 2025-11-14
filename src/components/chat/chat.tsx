@@ -1,13 +1,11 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchMessagesInfiniteAction } from "@/app/_actions/messages-infinite/messages-infinite";
 import { ChatHeader } from "@/components/chat/chat-header";
 import { MessageInput } from "@/components/chat/message-inpit";
 import { MessageList } from "@/components/chat/message-list";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { useSocket } from "@/hooks/useSocket";
 import type { User } from "@/lib/api/user/types";
 import type { Message } from "@/lib/types/chat";
@@ -25,7 +23,7 @@ export const Chat = ({
   initialMessages,
   conversationId,
 }: ChatProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const queryClient = useQueryClient();
   const [recipientOnlineStatus, setRecipientOnlineStatus] = useState(false);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -46,13 +44,52 @@ export const Chat = ({
       enabled: !!conversationId,
     });
 
-  // ✅ Flatten all pages into single messages array
-  const allMessages =
-    data?.pages.flatMap((page) => page.messages) ?? initialMessages;
+  const allMessages = useMemo(() => {
+    if (!data) return initialMessages;
 
-  const handleMessageReceived = useCallback((message: Message) => {
-    setMessages((prev) => [message, ...prev]);
-  }, []);
+    const messages = data.pages.flatMap((page) => page.messages);
+
+    const messageMap = new Map<number, Message>();
+    messages.forEach((message) => {
+      if (!messageMap.has(message.id)) {
+        messageMap.set(message.id, message);
+      }
+    });
+
+    return Array.from(messageMap.values());
+  }, [data, initialMessages]);
+
+  const addMessageToCache = useCallback(
+    (message: Message) => {
+      queryClient.setQueryData(["messages", conversationId], (old: any) => {
+        if (!old) return old;
+
+        const firstPage = old.pages[0];
+        if (firstPage.messages.some((m: Message) => m.id === message.id)) {
+          return old;
+        }
+
+        return {
+          ...old,
+          pages: [
+            {
+              ...firstPage,
+              messages: [message, ...firstPage.messages],
+            },
+            ...old.pages.slice(1),
+          ],
+        };
+      });
+    },
+    [queryClient, conversationId],
+  );
+
+  const handleMessageReceived = useCallback(
+    (message: Message) => {
+      addMessageToCache(message);
+    },
+    [addMessageToCache],
+  );
 
   const handleMessageStatusUpdate = useCallback(
     (data: {
@@ -60,13 +97,21 @@ export const Chat = ({
       status: "PENDING" | "DELIVERED" | "READ";
       userId?: number;
     }) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === data.messageId ? { ...msg, status: data.status } : msg,
-        ),
-      );
+      queryClient.setQueryData(["messages", conversationId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            messages: page.messages.map((msg: Message) =>
+              msg.id === data.messageId ? { ...msg, status: data.status } : msg,
+            ),
+          })),
+        };
+      });
     },
-    [],
+    [queryClient, conversationId],
   );
 
   const handleUserStatusChange = useCallback(
@@ -78,9 +123,12 @@ export const Chat = ({
     [recipient.id],
   );
 
-  const handleMessageSent = useCallback((message: Message) => {
-    setMessages((prev) => [message, ...prev]);
-  }, []);
+  const handleMessageSent = useCallback(
+    (message: Message) => {
+      addMessageToCache(message);
+    },
+    [addMessageToCache],
+  );
 
   const {
     isConnected,
@@ -99,16 +147,13 @@ export const Chat = ({
     onMessageSent: handleMessageSent,
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: ignore
   useEffect(() => {
-    if (!isConnected || messages.length === 0) return;
+    if (!isConnected || allMessages.length === 0) return;
 
-    // Get all unread messages from the recipient
-    const unreadMessages = messages.filter(
+    const unreadMessages = allMessages.filter(
       (msg) => msg.senderId === recipient.id && msg.status !== "READ",
     );
 
-    // Mark each unread message as read
     if (unreadMessages.length > 0) {
       console.log(
         "🔵 Marking messages as read:",
@@ -118,7 +163,13 @@ export const Chat = ({
         markMessageAsRead(msg.id, msg.conversationId);
       });
     }
-  }, [messages.length, isConnected]);
+  }, [
+    allMessages.length,
+    isConnected,
+    recipient.id,
+    markMessageAsRead,
+    allMessages,
+  ]);
 
   useEffect(() => {
     if (isConnected && checkUserStatus) {
@@ -135,12 +186,7 @@ export const Chat = ({
   const isTyping = typingUsers.has(recipient.id);
 
   return (
-    <Card className="flex flex-col h-[600px] w-full max-w-2xl mx-auto">
-      <div className="px-4 pt-2">
-        <Badge variant={isConnected ? "default" : "destructive"}>
-          {isConnected ? "Connected" : "Disconnected"}
-        </Badge>
-      </div>
+    <div className="w-full">
       <ChatHeader recipient={recipient} isOnline={recipientOnlineStatus} />
       <MessageList
         messages={allMessages}
@@ -156,6 +202,6 @@ export const Chat = ({
         onTypingStop={stopTyping}
         disabled={!isConnected}
       />
-    </Card>
+    </div>
   );
 };

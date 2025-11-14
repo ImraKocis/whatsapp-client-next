@@ -23,12 +23,10 @@ export const MessageList = ({
   hasMore,
   isLoadingMore,
 }: MessageListProps) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
-  const previousScrollHeight = useRef<number>(0);
-  const previousMessageCount = useRef<number>(0);
 
   useEffect(() => {
     if (!loadMoreTriggerRef.current) return;
@@ -51,45 +49,20 @@ export const MessageList = ({
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, onLoadMore]);
 
+  const scrollToBottom = () => {
+    chatContainerRef.current?.scrollIntoView(false);
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignore scroll method
   useEffect(() => {
-    if (scrollRef.current && messages.length > 0) {
-      const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]",
-      );
-
-      if (!viewport) return;
-
-      const currentScrollHeight = viewport.scrollHeight;
-      const messageCountIncreased =
-        messages.length > previousMessageCount.current;
-
-      if (messageCountIncreased && previousScrollHeight.current > 0) {
-        viewport.scrollTop = currentScrollHeight - previousScrollHeight.current;
-      } else if (previousMessageCount.current === 0 || !messageCountIncreased) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-
-      previousMessageCount.current = messages.length;
-      previousScrollHeight.current = currentScrollHeight;
-    }
-  }, [messages.length]);
-
-  useEffect(() => {
-    if (isTyping && scrollRef.current) {
-      const viewport = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]",
-      );
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-  }, [isTyping]);
+    scrollToBottom();
+  }, [messages.length, isTyping]);
 
   const sortedMessages = [...messages].reverse();
 
   return (
-    <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
-      <div className="space-y-4">
+    <ScrollArea className="h-[700px]">
+      <div className="flex flex-1 flex-col h-full px-4" ref={chatContainerRef}>
         <div
           ref={topRef}
           className="flex flex-col justify-center items-center py-2"
@@ -126,7 +99,7 @@ export const MessageList = ({
                 style={{ animationDelay: "0.4s" }}
               />
             </div>
-            <span>typing...</span>
+            <span>Typing...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
